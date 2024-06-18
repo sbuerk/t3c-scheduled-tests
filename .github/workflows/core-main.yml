@@ -1,0 +1,66 @@
+name: core-main
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '05 6 * * *'
+
+jobs:
+  unit:
+    name: main-unit
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '8.2', '8.3' ]
+        test:
+          - 'unit'
+          - 'unitRandom'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: 'typo3/typo3'
+          ref: 'main'
+          token: ${{ github.token }}
+          path: 'core'
+
+      - name: Composer install
+        run: |
+          core/Build/Scripts/runTests.sh -s composerInstallMax
+          core/Build/Scripts/runTests.sh -s composer -- require --dev \
+            phpunit/phpunit:"dev-main" \
+            doctrine/dbal:"4.1.x@dev"
+
+      - name: 'core/Build/Scripts/runTests.sh -p ${{ matrix.php }} -s ${{ matrix.test }}'
+        run: |
+          core/Build/Scripts/runTests.sh -p ${{ matrix.php }} -s ${{ matrix.test }}
+
+  functional:
+    name: main-functional
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '8.2', '8.3' ]
+        dbvendor: [ 'mysql', 'mariadb', 'sqlite', 'postgres' ]
+        number: [ '1/4', '2/4', '3/4', '4/4' ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: 'typo3/typo3'
+          ref: 'main'
+          token: ${{ github.token }}
+          path: 'core'
+
+      - name: Composer install
+        run: |
+          core/Build/Scripts/runTests.sh -s composerInstallMax
+          core/Build/Scripts/runTests.sh -s composer -- require --dev \
+            phpunit/phpunit:"dev-main" \
+            doctrine/dbal:"4.1.x@dev"
+
+      - name: 'core/Build/Scripts/runTests.sh -p ${{ matrix.php }} -s functional -d ${{ matrix.dbvendor }} -c ${{ matrix.number }}'
+        run: |
+          core/Build/Scripts/runTests.sh -p ${{ matrix.php }} -s functional -d ${{ matrix.dbvendor }} -c ${{ matrix.number }}
